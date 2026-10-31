@@ -11,6 +11,14 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Find project directory
+        id: proj
+        run: |
+          f=$(find . -name settings.gradle.kts -not -path "*/node_modules/*" | head -n 1)
+          if [ -z "$f" ]; then echo "settings.gradle.kts not found. Files in repo:"; find . -not -path "./.git/*" | head -50; exit 1; fi
+          dir=$(dirname "$f")
+          echo "Project dir: $dir"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
       - name: Install Android SDK packages
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
@@ -19,8 +27,9 @@ jobs:
         with:
           gradle-version: 8.7
       - name: Build debug APK
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ steps.proj.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
